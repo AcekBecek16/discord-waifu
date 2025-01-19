@@ -30,6 +30,17 @@ async function execute(interaction) {
 		);
 	}
 
+	// Check if bot has permission to join and speak in the channel
+	if (!voiceChannel.joinable || !voiceChannel.speakable) {
+		return interaction.editReply(
+			"I don't have permission to join or speak in that voice channel!"
+		);
+	}
+
+	console.log(
+		`Attempting to join voice channel: ${voiceChannel.name} (${voiceChannel.id}) in guild ${interaction.guild.name}`
+	);
+
 	try {
 		// Get audio stream
 		let stream;
