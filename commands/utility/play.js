@@ -7,6 +7,7 @@ const {
 } = require('@discordjs/voice');
 const ytdl = require('ytdl-core');
 const { search } = require('play-dl');
+const { setCurrentSong } = require('./nowplaying');
 
 const data = new SlashCommandBuilder()
 	.setName('play')

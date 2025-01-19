@@ -13,7 +13,15 @@ const app = express();
 
 app.use(express.json());
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+const { handleInteraction } = require('./commands/utility/playerInteractions');
+
+const client = new Client({
+	intents: [
+		GatewayIntentBits.Guilds,
+		GatewayIntentBits.GuildMessages,
+		GatewayIntentBits.MessageContent,
+	],
+});
 const token = process.env.bot_token;
 
 client.once(Events.ClientReady, (readyClient) => {
@@ -24,6 +32,7 @@ client.commands = new Collection();
 const foldersPath = path.join(__dirname, 'commands');
 const commandFolders = fs.readdirSync(foldersPath);
 
+// Register commands
 for (const folder of commandFolders) {
 	const commandsPath = path.join(foldersPath, folder);
 	const commandFiles = fs
@@ -40,6 +49,12 @@ for (const folder of commandFolders) {
 			);
 		}
 	}
+}
+
+// Register nowplaying command
+const nowplayingCommand = require('./commands/utility/nowplaying');
+if ('data' in nowplayingCommand && 'execute' in nowplayingCommand) {
+	client.commands.set(nowplayingCommand.data.name, nowplayingCommand);
 }
 
 client.on(Events.InteractionCreate, async (interaction) => {
