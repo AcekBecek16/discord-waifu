@@ -20,7 +20,9 @@ const data = new SlashCommandBuilder()
 	);
 
 async function execute(interaction) {
-	await interaction.deferReply();
+	if (!interaction.deferred && !interaction.replied) {
+		await interaction.deferReply();
+	}
 
 	const query = interaction.options.getString('query');
 	const voiceChannel = interaction.member.voice.channel;
