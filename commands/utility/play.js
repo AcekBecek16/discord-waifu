@@ -52,48 +52,67 @@ async function execute(interaction) {
 
 		while (retries > 0) {
 			try {
-				if (ytdl.validateURL(query)) {
-					stream = ytdl(query, {
-						filter: 'audioonly',
-						quality: 'highestaudio',
-						highWaterMark: 1 << 25,
-						requestOptions: {
-							headers: {
-								'User-Agent':
-									'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-							},
-						},
-						retryOptions: {
-							maxRetries: 3,
-							backoff: {
-								initial: 1000,
-								max: 5000,
-							},
-						},
-					});
-				} else {
-					const searchResults = await search(query, { limit: 1 });
-					if (!searchResults[0]) {
+				let videoUrl = query;
+				let searchResult;
+
+				if (!ytdl.validateURL(query)) {
+					searchResult = await search(query, { limit: 1 });
+					if (!searchResult[0]) {
 						return interaction.editReply('No results found for your query');
 					}
-					stream = ytdl(searchResults[0].url, {
-						filter: 'audioonly',
-						quality: 'highestaudio',
-						highWaterMark: 1 << 25,
-						requestOptions: {
-							headers: {
-								'User-Agent':
-									'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+					videoUrl = searchResult[0].url;
+				}
+
+				// Try different quality options if 410 error occurs
+				const qualityOptions = ['highestaudio', 'lowestaudio'];
+				let lastError;
+
+				for (const quality of qualityOptions) {
+					try {
+						stream = ytdl(videoUrl, {
+							filter: 'audioonly',
+							quality: quality,
+							highWaterMark: 1 << 25,
+							requestOptions: {
+								headers: {
+									'User-Agent':
+										'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+								},
 							},
-						},
-						retryOptions: {
-							maxRetries: 3,
-							backoff: {
-								initial: 1000,
-								max: 5000,
+							retryOptions: {
+								maxRetries: 3,
+								backoff: {
+									initial: 1000,
+									max: 5000,
+								},
 							},
-						},
-					});
+						});
+
+						// Test the stream
+						await new Promise((resolve, reject) => {
+							stream.on('error', reject);
+							stream.on('response', resolve);
+						});
+
+						// If we get here, the stream is valid
+						break;
+					} catch (error) {
+						lastError = error;
+						if (error.message.includes('410')) {
+							console.log(
+								`Video unavailable with quality ${quality}, trying next option...`
+							);
+							continue;
+						}
+						throw error;
+					}
+				}
+
+				if (!stream) {
+					if (lastError && lastError.message.includes('410')) {
+						throw new Error('The requested video is no longer available');
+					}
+					throw lastError || new Error('Failed to create audio stream');
 				}
 
 				// Handle signature extraction errors
