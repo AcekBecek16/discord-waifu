@@ -201,16 +201,48 @@ async function execute(interaction) {
 			throw new Error('Failed to create audio resource');
 		}
 
-		// Set up connection and player with error handling
+		// Set up connection and player with detailed error handling
 		try {
-			connection.subscribe(player);
-			console.log('Successfully subscribed player to connection');
+			// Verify connection state
+			if (!connection.state.subscription) {
+				console.log('Subscribing player to connection...');
+				connection.subscribe(player);
+				console.log('Successfully subscribed player to connection');
+			}
 
-			player.play(resource);
-			console.log('Audio playback started successfully');
+			// Verify player state
+			if (player.state.status === AudioPlayerStatus.Idle) {
+				console.log('Starting audio playback...');
+				player.play(resource);
+
+				// Wait for playback to start
+				await new Promise((resolve, reject) => {
+					const timeout = setTimeout(() => {
+						reject(new Error('Playback timeout'));
+					}, 5000);
+
+					player.on(AudioPlayerStatus.Playing, () => {
+						clearTimeout(timeout);
+						resolve();
+					});
+
+					player.on('error', (error) => {
+						clearTimeout(timeout);
+						reject(error);
+					});
+				});
+
+				console.log('Audio playback started successfully');
+			} else {
+				console.log('Player is already in state:', player.state.status);
+			}
 		} catch (error) {
 			console.error('Error starting playback:', error);
-			connection.destroy();
+			try {
+				connection.destroy();
+			} catch (destroyError) {
+				console.error('Error destroying connection:', destroyError);
+			}
 			throw new Error('Failed to start playback: ' + error.message);
 		}
 
