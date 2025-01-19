@@ -57,6 +57,11 @@ async function execute(interaction) {
 			});
 		}
 
+		// Validate stream
+		if (!stream) {
+			throw new Error('Failed to create audio stream');
+		}
+
 		// Join voice channel
 		const connection = joinVoiceChannel({
 			channelId: voiceChannel.id,
@@ -64,22 +69,68 @@ async function execute(interaction) {
 			adapterCreator: interaction.guild.voiceAdapterCreator,
 		});
 
-		// Create audio player
-		const player = createAudioPlayer();
-		const resource = createAudioResource(stream);
+		// Create audio player with error handling
+		const player = createAudioPlayer({
+			behaviors: {
+				noSubscriber: 'pause',
+				maxMissedFrames: 250,
+			},
+		});
 
-		player.play(resource);
+		// Create audio resource with error handling
+		const resource = createAudioResource(stream, {
+			inlineVolume: true,
+			metadata: {
+				requestedBy: interaction.user.tag,
+			},
+		});
+
+		// Validate resource
+		if (!resource) {
+			connection.destroy();
+			throw new Error('Failed to create audio resource');
+		}
+
+		// Set up connection and player
 		connection.subscribe(player);
+		player.play(resource);
 
 		// Handle player events
 		player.on(AudioPlayerStatus.Idle, () => {
-			connection.destroy();
+			try {
+				connection.destroy();
+			} catch (error) {
+				console.error('Error destroying connection:', error);
+			}
 		});
 
 		player.on('error', (error) => {
-			console.error('Error:', error);
+			console.error('Player Error:', error);
 			interaction.editReply('An error occurred while playing the song');
-			connection.destroy();
+			try {
+				connection.destroy();
+			} catch (error) {
+				console.error('Error destroying connection:', error);
+			}
+		});
+
+		connection.on('stateChange', (oldState, newState) => {
+			console.log(
+				'Connection state changed:',
+				oldState.status,
+				'->',
+				newState.status
+			);
+		});
+
+		connection.on('error', (error) => {
+			console.error('Connection Error:', error);
+			interaction.editReply('An error occurred with the voice connection');
+			try {
+				connection.destroy();
+			} catch (error) {
+				console.error('Error destroying connection:', error);
+			}
 		});
 
 		await interaction.editReply('Now playing your song!');
