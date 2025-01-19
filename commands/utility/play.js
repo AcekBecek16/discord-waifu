@@ -61,6 +61,13 @@ async function execute(interaction) {
 									'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
 							},
 						},
+						retryOptions: {
+							maxRetries: 3,
+							backoff: {
+								initial: 1000,
+								max: 5000,
+							},
+						},
 					});
 				} else {
 					const searchResults = await search(query, { limit: 1 });
@@ -77,8 +84,36 @@ async function execute(interaction) {
 									'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
 							},
 						},
+						retryOptions: {
+							maxRetries: 3,
+							backoff: {
+								initial: 1000,
+								max: 5000,
+							},
+						},
 					});
 				}
+
+				// Handle signature extraction errors
+				stream.on('error', (error) => {
+					if (error.message.includes('Could not extract functions')) {
+						console.error(
+							'Signature extraction failed, retrying with different options...'
+						);
+						stream = ytdl(query || searchResults[0].url, {
+							filter: 'audioonly',
+							quality: 'lowestaudio',
+							highWaterMark: 1 << 25,
+							requestOptions: {
+								headers: {
+									'User-Agent':
+										'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+								},
+							},
+						});
+					}
+					throw error;
+				});
 
 				// Test the stream
 				stream.on('error', (error) => {
