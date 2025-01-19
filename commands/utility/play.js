@@ -43,40 +43,93 @@ async function execute(interaction) {
 	);
 
 	try {
-		// Get audio stream
+		// Get audio stream with retry logic
 		let stream;
-		if (ytdl.validateURL(query)) {
-			stream = ytdl(query, { filter: 'audioonly', quality: 'highestaudio' });
-		} else {
-			const searchResults = await search(query, { limit: 1 });
-			if (!searchResults[0]) {
-				return interaction.editReply('No results found for your query');
+		let retries = 3;
+		let lastError;
+
+		while (retries > 0) {
+			try {
+				if (ytdl.validateURL(query)) {
+					stream = ytdl(query, {
+						filter: 'audioonly',
+						quality: 'highestaudio',
+						highWaterMark: 1 << 25,
+						requestOptions: {
+							headers: {
+								'User-Agent':
+									'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+							},
+						},
+					});
+				} else {
+					const searchResults = await search(query, { limit: 1 });
+					if (!searchResults[0]) {
+						return interaction.editReply('No results found for your query');
+					}
+					stream = ytdl(searchResults[0].url, {
+						filter: 'audioonly',
+						quality: 'highestaudio',
+						highWaterMark: 1 << 25,
+						requestOptions: {
+							headers: {
+								'User-Agent':
+									'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+							},
+						},
+					});
+				}
+
+				// Test the stream
+				stream.on('error', (error) => {
+					throw error;
+				});
+
+				// If we get here, the stream is valid
+				break;
+			} catch (error) {
+				lastError = error;
+				retries--;
+				if (retries > 0) {
+					console.log(`Stream error, retrying... (${retries} attempts left)`);
+					await new Promise((resolve) => setTimeout(resolve, 1000));
+				}
 			}
-			stream = ytdl(searchResults[0].url, {
-				filter: 'audioonly',
-				quality: 'highestaudio',
-			});
 		}
 
-		// Validate stream
 		if (!stream) {
-			throw new Error('Failed to create audio stream');
+			throw lastError || new Error('Failed to create audio stream');
 		}
 
-		// Join voice channel
-		const connection = joinVoiceChannel({
-			channelId: voiceChannel.id,
-			guildId: interaction.guild.id,
-			adapterCreator: interaction.guild.voiceAdapterCreator,
-		});
+		// Join voice channel with error handling
+		let connection;
+		try {
+			connection = joinVoiceChannel({
+				channelId: voiceChannel.id,
+				guildId: interaction.guild.id,
+				adapterCreator: interaction.guild.voiceAdapterCreator,
+			});
+			console.log('Successfully joined voice channel');
+		} catch (error) {
+			console.error('Error joining voice channel:', error);
+			throw new Error('Failed to join voice channel: ' + error.message);
+		}
 
-		// Create audio player with error handling
-		const player = createAudioPlayer({
-			behaviors: {
-				noSubscriber: 'pause',
-				maxMissedFrames: 250,
-			},
-		});
+		// Create audio player with detailed error handling
+		let player;
+		try {
+			player = createAudioPlayer({
+				behaviors: {
+					noSubscriber: 'pause',
+					maxMissedFrames: 250,
+				},
+			});
+			console.log('Audio player created successfully');
+		} catch (error) {
+			console.error('Error creating audio player:', error);
+			connection.destroy();
+			throw new Error('Failed to create audio player: ' + error.message);
+		}
 
 		// Create audio resource with error handling
 		const resource = createAudioResource(stream, {
@@ -92,9 +145,18 @@ async function execute(interaction) {
 			throw new Error('Failed to create audio resource');
 		}
 
-		// Set up connection and player
-		connection.subscribe(player);
-		player.play(resource);
+		// Set up connection and player with error handling
+		try {
+			connection.subscribe(player);
+			console.log('Successfully subscribed player to connection');
+
+			player.play(resource);
+			console.log('Audio playback started successfully');
+		} catch (error) {
+			console.error('Error starting playback:', error);
+			connection.destroy();
+			throw new Error('Failed to start playback: ' + error.message);
+		}
 
 		// Handle player events
 		player.on(AudioPlayerStatus.Idle, () => {
