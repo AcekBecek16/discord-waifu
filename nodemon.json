@@ -1,0 +1,6 @@
+{
+	"watch": ["commands", "index.js", "config.json"],
+	"ext": "js,json",
+	"ignore": ["test/", "node_modules/"],
+	"exec": "node index.js"
+}

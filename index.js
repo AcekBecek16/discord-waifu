@@ -16,11 +16,7 @@ app.use(express.json());
 const { handleInteraction } = require('./commands/utility/playerInteractions');
 
 const client = new Client({
-	intents: [
-		GatewayIntentBits.Guilds,
-		GatewayIntentBits.GuildMessages,
-		GatewayIntentBits.MessageContent,
-	],
+	intents: [GatewayIntentBits.Guilds],
 });
 const token = process.env.bot_token;
 

@@ -1,4 +1,5 @@
 const {
+	SlashCommandBuilder,
 	ActionRowBuilder,
 	ButtonBuilder,
 	ButtonStyle,
@@ -7,32 +8,72 @@ const {
 const { search } = require('play-dl');
 const ytdl = require('ytdl-core');
 
-module.exports = {
-	handleInteraction: async (interaction) => {
-		if (!interaction.isButton()) return;
+// Command data
+const data = new SlashCommandBuilder()
+	.setName('player')
+	.setDescription('Control the music player')
+	.addSubcommand((subcommand) =>
+		subcommand.setName('controls').setDescription('Show player controls')
+	);
 
-		try {
-			switch (interaction.customId) {
-				case 'lyrics':
-					await handleLyrics(interaction);
-					break;
-				case 'related':
-					await handleRelatedTracks(interaction);
-					break;
-				case 'artist':
-					await handleArtistInfo(interaction);
-					break;
-			}
-		} catch (error) {
-			console.error('Interaction error:', error);
-			await interaction.reply({
-				content: 'An error occurred while processing your request',
-				ephemeral: true,
-			});
+// Command execution
+async function execute(interaction) {
+	if (!interaction.isChatInputCommand()) return;
+
+	switch (interaction.options.getSubcommand()) {
+		case 'controls':
+			await showControls(interaction);
+			break;
+	}
+}
+
+// Interaction handling
+async function handleInteraction(interaction) {
+	if (!interaction.isButton()) return;
+
+	try {
+		switch (interaction.customId) {
+			case 'lyrics':
+				await handleLyrics(interaction);
+				break;
+			case 'related':
+				await handleRelatedTracks(interaction);
+				break;
+			case 'artist':
+				await handleArtistInfo(interaction);
+				break;
 		}
-	},
-};
+	} catch (error) {
+		console.error('Interaction error:', error);
+		await interaction.reply({
+			content: 'An error occurred while processing your request',
+			ephemeral: true,
+		});
+	}
+}
 
+// Subcommand functions
+async function showControls(interaction) {
+	const embed = new EmbedBuilder()
+		.setColor('#0099ff')
+		.setTitle('Player Controls')
+		.setDescription('Use these controls to manage playback');
+
+	const row = new ActionRowBuilder().addComponents(
+		new ButtonBuilder()
+			.setCustomId('pause')
+			.setLabel('Pause')
+			.setStyle(ButtonStyle.Primary),
+		new ButtonBuilder()
+			.setCustomId('skip')
+			.setLabel('Skip')
+			.setStyle(ButtonStyle.Secondary)
+	);
+
+	await interaction.reply({ embeds: [embed], components: [row] });
+}
+
+// Interaction handlers
 async function handleLyrics(interaction) {
 	await interaction.reply({
 		content: 'Lyrics feature coming soon!',
@@ -81,3 +122,9 @@ async function handleArtistInfo(interaction) {
 
 	await interaction.reply({ embeds: [embedContent], ephemeral: true });
 }
+
+module.exports = {
+	data,
+	execute,
+	handleInteraction,
+};
