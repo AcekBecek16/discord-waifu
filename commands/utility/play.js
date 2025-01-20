@@ -166,10 +166,10 @@ async function createAudioStream(videoUrl) {
 			});
 
 			// Test the stream
-			await new Promise((resolve, reject) => {
-				stream.on('error', reject);
-				stream.on('response', resolve);
-			});
+			// await new Promise((resolve, reject) => {
+			// 	stream.on('error', reject);
+			// 	stream.on('response', resolve);
+			// });
 
 			return stream;
 		} catch (error) {
