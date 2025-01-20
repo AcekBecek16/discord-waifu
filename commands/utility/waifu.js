@@ -30,10 +30,7 @@ const sendRequest = async (taging) => {
 	try {
 		const headers = new Headers();
 		headers.append('Accept-Version', 'v5');
-		headers.append(
-			'Authorization',
-			'Bearer n5caCsTPtG-uGmfjtOwfz0HlDj8HtXiwt7ksPAIUZ46p0k7LQtdKOvyEe23TUmJt2a4h9EnBVBWaWAc3ESVkOpgriXkmhNsDbSuzXaaw5B38w4thNRHLf68tU9ETaMG17TsrzyJxtBuqHSBQ9zoZ0qQR7ReIvYeLmDNbWobaHvE'
-		);
+		headers.append('Authorization', 'Bearer ' + process.env.waifukey);
 
 		const response = await fetch(requestUrl, { headers });
 		if (!response.ok) {
