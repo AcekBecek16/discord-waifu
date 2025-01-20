@@ -22,18 +22,6 @@ const data = new SlashCommandBuilder()
 const yts = require('yt-search'); // Add this at the top of your file
 
 // Helper function to search for YouTube videos
-async function searchYouTube(query) {
-	try {
-		const searchResults = await yts(query);
-		if (!searchResults.videos.length) {
-			throw new Error('No results found for your query');
-		}
-		return searchResults.videos[0].url; // Return the URL of the first result
-	} catch (error) {
-		console.error('Search Error:', error);
-		throw new Error('Failed to search for the song');
-	}
-}
 async function execute(interaction) {
 	if (!interaction.deferred && !interaction.replied) {
 		await interaction.deferReply();
@@ -134,6 +122,71 @@ async function execute(interaction) {
 			'An error occurred while trying to play the song'
 		);
 	}
+}
+
+// Helper function to search for YouTube videos
+async function searchYouTube(query) {
+	try {
+		const searchResults = await yts(query);
+		if (!searchResults.videos.length) {
+			throw new Error('No results found for your query');
+		}
+		return searchResults.videos[0].url; // Return the URL of the first result
+	} catch (error) {
+		console.error('Search Error:', error);
+		throw new Error('Failed to search for the song');
+	}
+}
+
+// Helper function to create audio stream with retry logic
+async function createAudioStream(videoUrl) {
+	const qualityOptions = ['highestaudio', 'lowestaudio'];
+	let lastError;
+
+	for (const quality of qualityOptions) {
+		try {
+			const stream = ytdl(videoUrl, {
+				filter: 'audioonly',
+				quality: quality,
+				highWaterMark: 1 << 25,
+				requestOptions: {
+					headers: {
+						'User-Agent':
+							'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+					},
+				},
+				retryOptions: {
+					maxRetries: 3,
+					backoff: {
+						initial: 1000,
+						max: 5000,
+					},
+				},
+			});
+
+			// Test the stream
+			await new Promise((resolve, reject) => {
+				stream.on('error', reject);
+				stream.on('response', resolve);
+			});
+
+			return stream;
+		} catch (error) {
+			lastError = error;
+			if (error.message.includes('410')) {
+				console.log(
+					`Video unavailable with quality ${quality}, trying next option...`
+				);
+				continue;
+			}
+			throw error;
+		}
+	}
+
+	if (lastError && lastError.message.includes('410')) {
+		throw new Error('The requested video is no longer available');
+	}
+	throw lastError || new Error('Failed to create audio stream');
 }
 
 module.exports = {
