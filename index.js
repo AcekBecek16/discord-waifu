@@ -47,5 +47,32 @@ for (const folder of commandFolders) {
 	}
 }
 
+// Register nowplaying command
+const nowplayingCommand = require('./commands/utility/nowplaying');
+if ('data' in nowplayingCommand && 'execute' in nowplayingCommand) {
+	client.commands.set(nowplayingCommand.data.name, nowplayingCommand);
+}
+
+client.on(Events.InteractionCreate, async (interaction) => {
+	if (!interaction.isCommand()) return;
+
+	const command = client.commands.get(interaction.commandName);
+
+	if (!command) {
+		console.error(`No command matching ${interaction.commandName} was found.`);
+		return;
+	}
+
+	try {
+		await command.execute(interaction);
+	} catch (error) {
+		console.error(error);
+		await interaction.reply({
+			content: 'There was an error while executing this command!',
+			ephemeral: true,
+		});
+	}
+});
+
 // Log in to Discord
 client.login(token);
