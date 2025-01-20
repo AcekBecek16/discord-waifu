@@ -1,0 +1,69 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Directory untuk dependensi
+node_modules/
+dist/
+
+# Cache
+.cache/
+.temp/
+.yarn/cache/
+.yarn/unplugged/
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+
+# Environment variables
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Editor dan IDE
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Sistem operasi
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage/
+.nyc_output/
+
+# Build output
+build/
+dist/
+out/
+.next/
+.nuxt/
+
+# Package manager specific
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Lain-lain
+*.tmp
+*.bak
+*.patch
+*.diff
