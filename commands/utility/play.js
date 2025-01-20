@@ -61,10 +61,10 @@ async function execute(interaction) {
 
 		// Create audio stream with retry logic
 		console.log(`Attempting to play video: ${videoUrl}`);
-		const stream = await createAudioStream(videoUrl);
-		if (!stream) {
-			throw new Error('Failed to create audio stream');
-		}
+		// const stream = await createAudioStream(videoUrl);
+		// if (!stream) {
+		// 	throw new Error('Failed to create audio stream');
+		// }
 
 		// Join voice channel
 		const connection = joinVoiceChannel({
@@ -84,7 +84,7 @@ async function execute(interaction) {
 		console.log('Audio player created successfully');
 
 		// Create audio resource
-		const resource = createAudioResource(stream, {
+		const resource = createAudioResource(videoUrl, {
 			inlineVolume: true,
 			metadata: {
 				requestedBy: interaction.user.tag,
