@@ -5,7 +5,8 @@ const {
 	createAudioResource,
 	AudioPlayerStatus,
 } = require('@discordjs/voice');
-const ytdl = require('ytdl-core');
+// const ytdl = require('ytdl-core');
+const ytdl = require('ytdl-core-discord');
 const { search } = require('play-dl');
 const { setCurrentSong } = require('./nowplaying');
 
@@ -80,7 +81,7 @@ async function execute(interaction) {
 			},
 		});
 		console.log('Audio player created successfully');
-
+		console.log(`Attempting to play video: ${videoUrl}`);
 		// Create audio resource
 		const resource = createAudioResource(stream, {
 			inlineVolume: true,
