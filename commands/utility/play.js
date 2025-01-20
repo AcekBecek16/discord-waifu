@@ -173,7 +173,10 @@ async function createAudioStream(videoUrl) {
 			return stream;
 		} catch (error) {
 			lastError = error;
-			if (error.message.includes('410')) {
+			if (
+				error.message.includes('410') ||
+				error.message.includes('Could not extract functions')
+			) {
 				console.log(
 					`Video unavailable with quality ${quality}, trying next option...`
 				);
@@ -183,8 +186,14 @@ async function createAudioStream(videoUrl) {
 		}
 	}
 
-	if (lastError && lastError.message.includes('410')) {
-		throw new Error('The requested video is no longer available');
+	if (
+		lastError &&
+		(lastError.message.includes('410') ||
+			lastError.message.includes('Could not extract functions'))
+	) {
+		throw new Error(
+			'The requested video is no longer available or could not be processed'
+		);
 	}
 	throw lastError || new Error('Failed to create audio stream');
 }
