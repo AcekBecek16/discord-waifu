@@ -5,9 +5,9 @@ const {
 	createAudioResource,
 	AudioPlayerStatus,
 } = require('@discordjs/voice');
-const ytdl = require('ytdl-core');
-// const ytdl = require('ytdl-core-discord');
-const { search } = require('play-dl');
+// const ytdl = require('ytdl-core');
+const ytdl = require('@distube/ytdl-core');
+const { search, play } = require('play-dl');
 const { setCurrentSong } = require('./nowplaying');
 
 const data = new SlashCommandBuilder()
@@ -61,10 +61,20 @@ async function execute(interaction) {
 
 		// Create audio stream with retry logic
 		console.log(`Attempting to play video: ${videoUrl}`);
-		// const stream = await createAudioStream(videoUrl);
-		// if (!stream) {
-		// 	throw new Error('Failed to create audio stream');
-		// }
+		const stream = ytdl(videoUrl, {
+			filter: 'audioonly',
+			quality: 'highestaudio',
+			// highWaterMark: 1 << 25, // Increase buffer size to avoid stuttering
+			requestOptions: {
+				headers: {
+					'User-Agent':
+						'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+				},
+			},
+		});
+		if (!stream) {
+			throw new Error('Failed to create audio stream');
+		}
 
 		// Join voice channel
 		const connection = joinVoiceChannel({
@@ -75,21 +85,11 @@ async function execute(interaction) {
 		console.log('Successfully joined voice channel');
 
 		// Create audio player
-		const player = createAudioPlayer({
-			behaviors: {
-				noSubscriber: 'pause',
-				maxMissedFrames: 250,
-			},
-		});
+		const player = createAudioPlayer();
 		console.log('Audio player created successfully');
 
 		// Create audio resource
-		const resource = createAudioResource(videoUrl, {
-			inlineVolume: true,
-			metadata: {
-				requestedBy: interaction.user.tag,
-			},
-		});
+		const resource = createAudioResource(stream);
 
 		// Subscribe player to connection
 		connection.subscribe(player);
@@ -133,7 +133,7 @@ async function searchYouTube(query) {
 		if (!searchResults.videos.length) {
 			throw new Error('No results found for your query');
 		}
-		console.log(searchResults.videos[0].url);
+		// console.log(searchResults.videos[0].url);
 		return searchResults.videos[0].url; // Return the URL of the first result
 	} catch (error) {
 		console.error('Search Error:', error);
@@ -150,18 +150,11 @@ async function createAudioStream(videoUrl) {
 			const stream = ytdl(videoUrl, {
 				filter: 'audioonly',
 				quality: quality,
-				highWaterMark: 1 << 25,
+				highWaterMark: 1 << 25, // 32 MB buffer
 				requestOptions: {
 					headers: {
 						'User-Agent':
 							'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-					},
-				},
-				retryOptions: {
-					maxRetries: 3,
-					backoff: {
-						initial: 1000,
-						max: 5000,
 					},
 				},
 			});
